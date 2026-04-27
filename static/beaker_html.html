@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Glacier Water Storage Beakers</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0b0f1a;--surf:#111827;--surf2:#1a2236;--border:#243048;--text:#e2e8f0;--muted:#64748b;--shadow:rgba(0,0,0,.55);--accent:#38bdf8;--accent2:#818cf8;--accent3:#34d399;--danger:#f87171;--warn:#fb923c;--head:'Syne',sans-serif;--mono:'JetBrains Mono',monospace}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--head);display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+
+/* ── Top bar ── */
+#topbar{width:100%;max-width:1100px;display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 16px;background:var(--surf);border:1px solid var(--border);border-radius:12px}
+#topbar h1{font-size:15px;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#topbar .spacer{flex:1}
+#glacier-label{font-family:var(--mono);font-size:10px;color:var(--muted)}
+#glacier-id-tag{font-family:var(--mono);font-size:9px;background:var(--surf2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;color:var(--accent)}
+
+/* ── Main card ── */
+#card{width:100%;max-width:1100px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 8px 32px var(--shadow)}
+
+/* ── State screens ── */
+#state-loading,#state-empty,#state-error{text-align:center;padding:60px 20px;color:var(--muted);font-family:var(--mono);font-size:11px}
+#state-loading .spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite;margin:0 auto 14px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+
+/* ── Info bar ── */
+#info-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px;padding:12px 14px;background:var(--surf2);border:1px solid rgba(56,189,248,.2);border-radius:12px}
+.ib-cell{text-align:center}
+.ib-label{font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px}
+.ib-val{font-size:14px;font-weight:800;color:var(--accent);margin-top:3px;font-family:var(--mono)}
+.ib-val.warn{color:var(--warn)}.ib-val.danger{color:var(--danger)}.ib-val.ok{color:var(--accent3)}
+
+/* ── Beakers row ── */
+#beakers-scroll{overflow-x:auto;padding-bottom:8px}
+#beakers-row{display:flex;gap:10px;align-items:flex-end;min-width:max-content;padding:4px 2px}
+
+/* ── Single beaker card ── */
+.bk-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 12px;border-radius:12px;border:2px solid var(--border);background:rgba(15,23,42,.5);cursor:pointer;transition:all .22s;min-width:90px}
+.bk-wrap:hover{border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.04)}
+.bk-wrap.active{border-color:var(--accent);background:rgba(56,189,248,.08)}
+
+/* ── Beaker SVG label ── */
+.bk-year{font-size:13px;font-weight:800;color:var(--text);transition:color .2s}
+.bk-wrap.active .bk-year{color:var(--accent)}
+.bk-vol{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px}
+.bk-status{font-family:var(--mono);font-size:8px;margin-top:3px}
+.status-ok{color:var(--accent3)}.status-warn{color:var(--warn)}.status-danger{color:var(--danger)}
+
+/* ── Mini bar trend ── */
+#trend-wrap{margin-top:18px}
+.trend-label{font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+#trend-bars{display:flex;gap:5px;align-items:flex-end;height:48px}
+.tb{flex:1;border-radius:3px 3px 0 0;cursor:pointer;transition:all .2s;min-width:20px}
+#trend-years{display:flex;gap:5px;margin-top:4px}
+.ty{flex:1;text-align:center;font-family:var(--mono);font-size:7px;color:var(--muted)}
+
+/* ── Loss gradient bar ── */
+#loss-bar-wrap{margin-top:16px}
+#loss-bar-bg{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent3),var(--warn),var(--danger));position:relative;overflow:visible}
+#loss-marker{position:absolute;top:-4px;width:2px;height:14px;background:#fff;border-radius:2px;transition:left .5s cubic-bezier(.4,0,.2,1);transform:translateX(-50%)}
+.loss-ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:4px}
+
+/* ── Footer ── */
+#footer{margin-top:12px;font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>💧 Glacier Water Storage</h1>
+  <span id="glacier-label">—</span>
+  <div class="spacer"></div>
+  <span id="glacier-id-tag">waiting for data…</span>
+</div>
+
+<div id="card">
+
+  <!-- State: loading -->
+  <div id="state-loading">
+    <div class="spin"></div>
+    Fetching glacier timeseries…
+  </div>
+
+  <!-- State: empty -->
+  <div id="state-empty" class="hidden">
+    <div style="font-size:36px;margin-bottom:10px;opacity:.2">🏔</div>
+    No volume data available for this glacier.
+  </div>
+
+  <!-- State: error -->
+  <div id="state-error" class="hidden">
+    <div style="font-size:36px;margin-bottom:10px;opacity:.3">⚠️</div>
+    <span id="error-msg">Could not load data.</span>
+  </div>
+
+  <!-- Main content (hidden until data loads) -->
+  <div id="main-content" class="hidden">
+
+    <!-- Info bar -->
+    <div id="info-bar">
+      <div class="ib-cell"><div class="ib-label">Glacier</div><div class="ib-val" id="ib-name" style="font-size:11px">—</div></div>
+      <div class="ib-cell"><div class="ib-label">Selected Year</div><div class="ib-val" id="ib-year">—</div></div>
+      <div class="ib-cell"><div class="ib-label">Ice Volume</div><div class="ib-val" id="ib-vol">—</div></div>
+      <div class="ib-cell"><div class="ib-label">Water Equiv.</div><div class="ib-val" id="ib-weq">—</div></div>
+      <div class="ib-cell"><div class="ib-label">Loss vs Baseline</div><div class="ib-val" id="ib-loss">—</div></div>
+    </div>
+
+    <!-- Beakers -->
+    <div id="beakers-scroll"><div id="beakers-row"></div></div>
+
+    <!-- Trend bar -->
+    <div id="trend-wrap">
+      <div class="trend-label">Ice volume trend — % of baseline</div>
+      <div id="trend-bars"></div>
+      <div id="trend-years"></div>
+    </div>
+
+    <!-- Loss gradient bar -->
+    <div id="loss-bar-wrap">
+      <div class="trend-label" style="margin-top:14px">Loss severity</div>
+      <div id="loss-bar-bg"><div id="loss-marker"></div></div>
+      <div class="loss-ends"><span>0% (baseline)</span><span>50% loss</span><span>100% gone</span></div>
+    </div>
+
+    <div id="footer">Ice volume × 0.917 ≈ liquid water equivalent · Data: OGGM simulation</div>
+  </div>
+
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────
+//  CONFIG
+// ──────────────────────────────────────────────────────────────────────────
+const API = "http://localhost:5000/api";
+const ICE_TO_WATER = 0.917;          // density conversion factor
+const IDEAL_GAP    = 25;             // target year gap between beakers
+const MIN_BEAKERS  = 2;              // need at least this many to show
+const MAX_BEAKERS  = 12;             // cap so they don't overflow
+
+// ──────────────────────────────────────────────────────────────────────────
+//  STATE
+// ──────────────────────────────────────────────────────────────────────────
+let _activeIdx = null;
+let _snapshotYears  = [];
+let _snapshotVols   = [];
+let _baseVol        = 1;
+let _glacierName    = "";
+
+// ──────────────────────────────────────────────────────────────────────────
+//  SHOW / HIDE STATE SCREENS
+// ──────────────────────────────────────────────────────────────────────────
+function setState(s, msg=""){
+  ["state-loading","state-empty","state-error","main-content"]
+    .forEach(id=>document.getElementById(id).classList.add("hidden"));
+  document.getElementById(s).classList.remove("hidden");
+  if(s==="state-error") document.getElementById("error-msg").textContent = msg;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  PICK SNAPSHOT YEARS FROM A DENSE TIMESERIES
+//  Strategy: snap to multiples of IDEAL_GAP, then fill gaps if too few
+// ──────────────────────────────────────────────────────────────────────────
+function pickYears(years, vols){
+  // Filter to years that actually have volume data
+  const pairs = years.map((y,i)=>({y,v:vols[i]})).filter(p=>p.v!==null&&p.v!==undefined&&isFinite(p.v));
+  if(pairs.length===0) return [];
+
+  const yMin = pairs[0].y, yMax = pairs[pairs.length-1].y;
+  const span = yMax - yMin;
+
+  // Try ideal gap first; if too many reduce gap, if too few increase
+  let gap = IDEAL_GAP;
+  while(true){
+    const snaps = [];
+    // Always include first and last
+    snaps.push(pairs[0]);
+    for(let yr = Math.ceil(yMin/gap)*gap; yr <= yMax; yr+=gap){
+      const p = pairs.reduce((a,b)=>Math.abs(b.y-yr)<Math.abs(a.y-yr)?b:a);
+      if(snaps[snaps.length-1].y !== p.y) snaps.push(p);
+    }
+    if(snaps[snaps.length-1].y !== pairs[pairs.length-1].y) snaps.push(pairs[pairs.length-1]);
+    // Deduplicate
+    const dedup = snaps.filter((p,i,a)=>i===0||p.y!==a[i-1].y);
+    if(dedup.length>=MIN_BEAKERS && dedup.length<=MAX_BEAKERS) return dedup;
+    if(dedup.length<MIN_BEAKERS) gap = Math.max(1, Math.floor(gap/2));
+    else gap = gap+10;
+    if(gap>span+10){
+      // Just return evenly spaced subset
+      const step = Math.ceil(pairs.length/(MAX_BEAKERS));
+      const out = [];
+      for(let i=0;i<pairs.length;i+=step) out.push(pairs[i]);
+      if(out[out.length-1].y!==pairs[pairs.length-1].y) out.push(pairs[pairs.length-1]);
+      return out.slice(0,MAX_BEAKERS);
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  BEAKER SVG BUILDER
+// ──────────────────────────────────────────────────────────────────────────
+function makeBeakerSVG(id, pct, isActive){
+  const BW=86, BH=200; // beaker canvas
+  const glassX=16, glassW=54, glassTop=26, glassBot=192;
+  const innerH = glassBot - glassTop; // 166
+  const fillH  = Math.max(3, pct * innerH);
+  const fillY  = glassBot - fillH;
+
+  // Water hue shifts blue→teal→green as pct increases
+  const hue = 195 + (1-pct)*15;
+  const lgt = 35 + pct*20;
+  const wc  = `hsl(${hue},75%,${lgt}%)`;
+  const glowStroke = isActive ? "#38bdf8" : "#243048";
+
+  const tickPcts = [0.25,0.5,0.75,1.0];
+
+  // SVG string
+  return `
+<svg width="${BW}" height="${BH}" viewBox="0 0 ${BW} ${BH}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="bclip-${id}">
+      <rect x="${glassX}" y="${glassTop}" width="${glassW}" height="${innerH}" rx="1"/>
+    </clipPath>
+    <linearGradient id="wg-${id}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="${wc}" stop-opacity=".65"/>
+      <stop offset="50%" stop-color="${wc}" stop-opacity=".98"/>
+      <stop offset="100%" stop-color="${wc}" stop-opacity=".65"/>
+    </linearGradient>
+    <linearGradient id="glass-${id}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(148,163,184,.18)"/>
+      <stop offset="35%" stop-color="rgba(148,163,184,.04)"/>
+      <stop offset="100%" stop-color="rgba(148,163,184,.14)"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Glass body -->
+  <path d="M ${glassX} ${glassTop} L ${glassX} ${glassBot} Q ${glassX} ${glassBot+2} ${glassX+2} ${glassBot+2} L ${glassX+glassW-2} ${glassBot+2} Q ${glassX+glassW} ${glassBot+2} ${glassX+glassW} ${glassBot} L ${glassX+glassW} ${glassTop} Z"
+    fill="url(#glass-${id})" stroke="${glowStroke}" stroke-width="${isActive?1.8:1.2}"/>
+
+  <!-- Water fill -->
+  <rect x="${glassX+1}" y="${fillY}" width="${glassW-2}" height="${fillH+1}"
+    fill="url(#wg-${id})" clip-path="url(#bclip-${id})"/>
+
+  <!-- Wave surface -->
+  <path d="M ${glassX+1} ${fillY} Q ${glassX+14} ${fillY-3} ${glassX+glassW/2} ${fillY} Q ${glassX+glassW-14} ${fillY+3} ${glassX+glassW-1} ${fillY}"
+    fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.2"
+    clip-path="url(#bclip-${id})"/>
+
+  <!-- Ice crystals at surface -->
+  ${pct>0.04 ? [22,33,47,59].map(x=>`
+    <polygon points="${x},${fillY+1} ${x-3},${fillY+7} ${x+3},${fillY+7}"
+      fill="rgba(186,230,253,.55)" clip-path="url(#bclip-${id})"/>`).join("") : ""}
+
+  <!-- Rim/lip -->
+  <rect x="${glassX-4}" y="${glassTop-4}" width="${glassW+8}" height="7" rx="3"
+    fill="#111827" stroke="${glowStroke}" stroke-width="${isActive?1.6:1}"/>
+
+  <!-- Bottom -->
+  <rect x="${glassX}" y="${glassBot}" width="${glassW}" height="3" rx="1"
+    fill="${glowStroke}"/>
+
+  <!-- Scale ticks + labels -->
+  ${tickPcts.map(t=>{
+    const ty = glassBot - t*innerH;
+    return `<line x1="${glassX+glassW}" y1="${ty}" x2="${glassX+glassW+7}" y2="${ty}" stroke="#334155" stroke-width="1"/>
+    <text x="${glassX+glassW+9}" y="${ty+3.5}" font-size="7" fill="#475569" font-family="monospace">${Math.round(t*100)}%</text>`;
+  }).join("")}
+
+  <!-- % label inside water (only if fill is tall enough) -->
+  ${fillH>28 ? `<text x="${glassX+glassW/2}" y="${fillY+fillH/2+4}"
+    text-anchor="middle" font-size="${pct>0.4?12:10}" font-weight="700"
+    fill="rgba(255,255,255,.92)" font-family="monospace">${Math.round(pct*100)}%</text>` : ""}
+</svg>`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  RENDER BEAKERS
+// ──────────────────────────────────────────────────────────────────────────
+function statusTag(pct){
+  if(pct>=0.8)  return {cls:"status-ok",   txt:"✓ Stable"};
+  if(pct>=0.5)  return {cls:"status-warn", txt:"● Declining"};
+  return           {cls:"status-danger",   txt:"⚠ Critical"};
+}
+
+function renderBeakers(){
+  const row = document.getElementById("beakers-row");
+  row.innerHTML = "";
+  _snapshotYears.forEach((yr,i)=>{
+    const pct = _snapshotVols[i]/_baseVol;
+    const st  = statusTag(pct);
+
+    const wrap = document.createElement("div");
+    wrap.className = "bk-wrap" + (i===_activeIdx?" active":"");
+    wrap.dataset.idx = i;
+    wrap.innerHTML = makeBeakerSVG(`${yr}-${i}`, pct, i===_activeIdx)
+      + `<div class="bk-year">${yr}</div>`
+      + `<div class="bk-vol">${_snapshotVols[i].toFixed(4)} km³</div>`
+      + `<div class="bk-status ${st.cls}">${st.txt}</div>`;
+    wrap.addEventListener("click",()=>selectBeaker(i));
+    row.appendChild(wrap);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  RENDER TREND BARS
+// ──────────────────────────────────────────────────────────────────────────
+function renderTrend(){
+  const barsEl  = document.getElementById("trend-bars");
+  const yearsEl = document.getElementById("trend-years");
+  barsEl.innerHTML = ""; yearsEl.innerHTML = "";
+  _snapshotYears.forEach((yr,i)=>{
+    const pct = _snapshotVols[i]/_baseVol;
+    const h   = Math.max(4, pct*48);
+    const isA = i===_activeIdx;
+    const tb  = document.createElement("div");
+    tb.className = "tb";
+    tb.style.height = h+"px";
+    tb.style.background = isA ? "#38bdf8"
+      : `rgba(56,189,248,${0.15+pct*0.5})`;
+    tb.style.border = isA ? "1px solid #38bdf8" : "1px solid transparent";
+    tb.addEventListener("click",()=>selectBeaker(i));
+    barsEl.appendChild(tb);
+
+    const ty = document.createElement("div");
+    ty.className = "ty";
+    ty.textContent = yr;
+    yearsEl.appendChild(ty);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  LOSS MARKER
+// ──────────────────────────────────────────────────────────────────────────
+function updateLossMarker(pct){
+  const loss = Math.max(0, Math.min(1, 1-pct));
+  document.getElementById("loss-marker").style.left = (loss*100)+"%";
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  SELECT BEAKER
+// ──────────────────────────────────────────────────────────────────────────
+function selectBeaker(i){
+  _activeIdx = i;
+  const yr  = _snapshotYears[i];
+  const vol = _snapshotVols[i];
+  const pct = vol/_baseVol;
+  const weq = vol*ICE_TO_WATER;
+  const lossPct = ((1-pct)*100).toFixed(1);
+
+  // Info bar
+  document.getElementById("ib-year").textContent = yr;
+  document.getElementById("ib-vol").textContent  = vol.toFixed(4)+" km³";
+  document.getElementById("ib-weq").textContent  = weq.toFixed(4)+" km³";
+
+  const lossEl = document.getElementById("ib-loss");
+  lossEl.textContent = lossPct+"%";
+  lossEl.className   = "ib-val "+(pct>=0.8?"ok":pct>=0.5?"warn":"danger");
+
+  updateLossMarker(pct);
+  renderBeakers();
+  renderTrend();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  LOAD GLACIER (called from parent window OR URL param for standalone use)
+// ──────────────────────────────────────────────────────────────────────────
+async function loadGlacier(rgiId){
+  setState("state-loading");
+  document.getElementById("glacier-id-tag").textContent = rgiId;
+  document.getElementById("glacier-label").textContent  = "Loading…";
+
+  try {
+    const [infoR, tsR] = await Promise.all([
+      fetch(`${API}/glacier/${encodeURIComponent(rgiId)}/info`),
+      fetch(`${API}/glacier/${encodeURIComponent(rgiId)}/timeseries`),
+    ]);
+    const info = await infoR.json();
+    const ts   = await tsR.json();
+
+    if(info.error || ts.error){
+      setState("state-error", info.error||ts.error);
+      return;
+    }
+
+    const name = info.name || rgiId;
+    _glacierName = name;
+    document.getElementById("glacier-label").textContent  = name;
+    document.getElementById("glacier-id-tag").textContent = rgiId;
+    document.getElementById("ib-name").textContent        = name;
+
+    // Extract valid volume pairs
+    const years = ts.years || [];
+    const vols  = ts.volume_km3 || [];
+    if(!years.length || vols.every(v=>v===null)){
+      setState("state-empty");
+      return;
+    }
+
+    const snaps = pickYears(years, vols);
+    if(snaps.length < MIN_BEAKERS){
+      setState("state-empty");
+      return;
+    }
+
+    _snapshotYears = snaps.map(p=>p.y);
+    _snapshotVols  = snaps.map(p=>p.v);
+    _baseVol       = _snapshotVols[0];   // earliest snapshot = baseline
+    _activeIdx     = 0;
+
+    setState("main-content");
+    renderBeakers();
+    renderTrend();
+    selectBeaker(0);
+
+  } catch(e){
+    setState("state-error", "Network error: "+e.message);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  COMMUNICATION WITH PARENT WINDOW
+//  The main portal does:  beakerFrame.contentWindow.postMessage({rgiId}, "*")
+// ──────────────────────────────────────────────────────────────────────────
+window.addEventListener("message", e=>{
+  if(e.data?.rgiId) loadGlacier(e.data.rgiId);
+});
+
+// Also support URL param for standalone testing: ?id=RGI60-14.01234
+const urlId = new URLSearchParams(location.search).get("id");
+if(urlId) loadGlacier(urlId);
+</script>
+</body>
+</html>

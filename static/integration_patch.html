@@ -1,0 +1,49 @@
+<!-- ════════════════════════════════════════════════════════════
+     STEP 1 — Add this CSS block inside your <style> tag
+     ════════════════════════════════════════════════════════════ -->
+<style>
+/* Beaker section inside panel */
+.bk-section{margin-bottom:14px}
+.bk-frame-wrap{position:relative;width:100%;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);background:var(--bg)}
+#beaker-frame{width:100%;height:420px;border:none;display:block;border-radius:var(--r)}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════
+     STEP 2 — Add this HTML block inside #gdetail, after the
+     .csec for Area (the last chart), before </div> closing gdetail
+     ════════════════════════════════════════════════════════════ -->
+<div class="csec bk-section">
+  <div class="ctitle" style="--accent:#2dd4bf">Water Storage (beaker view)</div>
+  <div class="bk-frame-wrap">
+    <iframe id="beaker-frame"
+      src="glacier_beaker.html"
+      title="Glacier water storage beakers"
+      sandbox="allow-scripts allow-same-origin">
+    </iframe>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     STEP 3 — In your _doOpenGlacier() function, after the line:
+       document.getElementById("gdetail").style.display = "";
+     add this one line to push the glacier ID to the iframe:
+     ════════════════════════════════════════════════════════════ -->
+<script>
+// Put this right after:  document.getElementById("gdetail").style.display = "";
+const bkf = document.getElementById("beaker-frame");
+if(bkf) bkf.contentWindow.postMessage({ rgiId: id }, "*");
+</script>
+
+<!-- ════════════════════════════════════════════════════════════
+     STEP 4 — File placement
+     ════════════════════════════════════════════════════════════
+     Put glacier_beaker.html in the same folder as index.html
+     (i.e. inside your /static/ directory).
+
+     Your file tree should look like:
+       static/
+         index.html
+         glacier_beaker.html   ← new file
+
+     That's it. No other changes needed.
+     ════════════════════════════════════════════════════════════ -->

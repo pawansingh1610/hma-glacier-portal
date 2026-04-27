@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HMA Glacier Portal</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0b0f1a;--surf:#111827;--surf2:#1a2236;--border:#243048;--text:#e2e8f0;--muted:#64748b;--shadow:rgba(0,0,0,.55);--accent:#38bdf8;--accent2:#818cf8;--accent3:#34d399;--danger:#f87171;--warn:#fb923c;--head:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;--pw:430px;--hh:54px;--r:10px}
+[data-theme="light"]{--bg:#eef2f7;--surf:#fff;--surf2:#e4eaf3;--border:#c5d2e3;--text:#1a2236;--muted:#6b7a99;--shadow:rgba(0,0,0,.15)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--head);transition:background .35s,color .35s}
+#hdr{position:fixed;top:0;left:0;right:0;height:var(--hh);background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 14px;z-index:1200;box-shadow:0 1px 10px var(--shadow)}
+#hdr h1{font-size:15px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tag{font-family:var(--mono);font-size:9px;background:var(--surf2);border:1px solid var(--border);padding:2px 8px;border-radius:20px;color:var(--muted);white-space:nowrap}
+.spacer{flex:1}
+#region-wrap{position:relative}
+#region-btn{font-family:var(--mono);font-size:9px;cursor:pointer;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surf2);color:var(--text);display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all .2s;max-width:230px}
+#region-btn:hover{border-color:var(--accent)}
+.arr{font-size:7px;opacity:.6}
+#region-menu{position:absolute;top:calc(100% + 4px);left:0;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);min-width:280px;max-height:440px;overflow-y:auto;z-index:2100;display:none;box-shadow:0 8px 24px var(--shadow)}
+#region-menu::-webkit-scrollbar{width:3px}#region-menu::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+#region-menu.open{display:block}
+.rmi{padding:7px 11px;cursor:pointer;font-size:10px;font-family:var(--mono);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;transition:background .12s;color:var(--text)}
+.rmi:last-child{border-bottom:none}.rmi:hover{background:var(--surf2);color:var(--accent)}.rmi.active{color:var(--accent);font-weight:700}
+.rmi .rmc{color:var(--muted);font-size:8px;margin-left:auto}
+#zinfo{font-family:var(--mono);font-size:9px;background:var(--surf2);border:1px solid var(--border);padding:3px 9px;border-radius:20px;color:var(--muted);white-space:nowrap}
+#zmode{font-weight:700}
+.hbtn{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surf2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;flex-shrink:0}.hbtn:hover{border-color:var(--accent)}
+#bmap-wrap{position:relative}
+#bmap-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);min-width:180px;z-index:2100;display:none;overflow:hidden;box-shadow:0 8px 24px var(--shadow)}
+#bmap-menu.open{display:block}
+.bmi{padding:8px 12px;cursor:pointer;font-size:10px;font-family:var(--mono);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;transition:background .12s;color:var(--text)}
+.bmi:last-child{border-bottom:none}.bmi:hover{background:var(--surf2);color:var(--accent)}.bmi.active{color:var(--accent)}
+.bmi .dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+#sw{position:relative}
+#si{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:5px 10px 5px 28px;font-family:var(--mono);font-size:10px;color:var(--text);outline:none;width:180px;transition:border-color .2s}
+#si:focus{border-color:var(--accent)}#si::placeholder{color:var(--muted)}
+#sw::before{content:"⌕";position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+#stabs{display:flex;gap:3px;margin-bottom:2px}
+.stab{font-family:var(--mono);font-size:8px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:var(--surf2);transition:all .15s}
+.stab.act{background:var(--accent);color:#000;border-color:var(--accent)}
+#sr{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf);border:1px solid var(--border);border-radius:8px;max-height:240px;overflow-y:auto;z-index:2000;display:none;box-shadow:0 8px 24px var(--shadow)}
+.sri{padding:7px 10px;cursor:pointer;font-size:10px;border-bottom:1px solid var(--border);transition:background .12s}
+.sri:hover{background:var(--surf2);color:var(--accent)}.sri small{color:var(--muted);display:block;font-family:var(--mono);font-size:8px;margin-top:1px}
+#mc{position:fixed;top:var(--hh);left:0;right:var(--pw);bottom:0;z-index:1}#map{width:100%;height:100%}
+#zguide{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:6px 13px;font-family:var(--mono);font-size:9px;color:var(--muted);z-index:800;pointer-events:none;white-space:nowrap;box-shadow:0 4px 14px var(--shadow)}
+#legend{position:absolute;bottom:20px;left:12px;z-index:800;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;pointer-events:none;box-shadow:0 4px 14px var(--shadow);font-family:var(--mono)}
+.lt{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
+.lr{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:9px;color:var(--text)}.ld{width:16px;height:2px;border-radius:2px}
+#panel{position:fixed;top:var(--hh);right:0;width:var(--pw);bottom:0;background:var(--surf);border-left:1px solid var(--border);display:flex;flex-direction:column;z-index:900;overflow:hidden;transition:background .35s}
+#sbar{padding:10px 13px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex-shrink:0}
+.sc{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:7px 9px}.sc .sl{font-family:var(--mono);font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}.sc .sv{font-size:16px;font-weight:800;margin-top:1px}
+.b{color:var(--accent)}.i{color:var(--accent2)}.g{color:var(--accent3)}
+#ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.pt{flex:1;padding:8px;text-align:center;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s}.pt.act{color:var(--accent);border-bottom-color:var(--accent)}
+#pb{flex:1;overflow-y:auto;padding:13px;scroll-behavior:smooth}#pb::-webkit-scrollbar{width:3px}#pb::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+#placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;gap:10px;color:var(--muted)}
+#placeholder .ico{font-size:44px;opacity:.2}#placeholder p{font-size:11px;line-height:1.7;max-width:230px}
+#gname{font-size:18px;font-weight:800;letter-spacing:-.4px;margin-bottom:3px;background:linear-gradient(90deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#gid{font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:11px}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:13px}
+.ic{background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:7px 8px}.ic .il{font-family:var(--mono);font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}.ic .iv{font-size:12px;font-weight:700;margin-top:1px;color:var(--text)}
+.csec{margin-bottom:14px}.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:5px}.ctitle::before{content:"";width:3px;height:10px;border-radius:2px;background:var(--accent)}.ctitle.v::before{background:var(--accent2)}.ctitle.a::before{background:var(--accent3)}
+.cbox{background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);padding:9px}
+.spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite;margin:32px auto}@keyframes rot{to{transform:rotate(360deg)}}
+.nodata-msg{text-align:center;padding:14px 0;color:var(--muted);font-size:10px;font-family:var(--mono)}
+.ob{background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);padding:9px;margin-bottom:11px}.ot{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+#ov-region-sel{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.ov-rp{font-family:var(--mono);font-size:8px;padding:3px 8px;border-radius:20px;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:var(--surf2);transition:all .15px;white-space:nowrap}.ov-rp:hover{border-color:var(--accent);color:var(--accent)}.ov-rp.act{background:var(--accent);color:#000;border-color:var(--accent)}
+#credit{position:absolute;bottom:6px;right:6px;z-index:1000;font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--surf);border:1px solid var(--border);padding:3px 9px;border-radius:20px;box-shadow:0 2px 8px var(--shadow);pointer-events:none}
+#dbg-toggle{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:9999;font-family:var(--mono);font-size:9px;padding:4px 12px;border-radius:20px;border:1px solid var(--accent);background:var(--surf2);color:var(--accent);cursor:pointer}
+#dbg-panel{display:none;position:fixed;bottom:44px;left:50%;transform:translateX(-50%);width:680px;max-height:340px;overflow-y:auto;z-index:9998;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-family:var(--mono);font-size:10px;box-shadow:0 8px 32px var(--shadow)}
+#dbg-panel.open{display:block}
+.dbg-ok{color:var(--accent3)}.dbg-err{color:var(--danger)}.dbg-warn{color:var(--warn)}.dbg-info{color:var(--muted)}
+.dbg-row{padding:2px 0;border-bottom:1px solid var(--border)}.dbg-row:last-child{border:none}
+.leaflet-container{background:var(--bg)}.leaflet-popup-content-wrapper{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--head);box-shadow:0 8px 32px var(--shadow)}.leaflet-popup-tip{background:var(--surf)}
+.rbubble{background:var(--surf);border:2px solid currentColor;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px var(--shadow);transition:transform .2s}.rbubble:hover{transform:scale(1.06)}.rbc{font-size:11px;font-weight:800}.rbn{font-family:var(--mono);font-size:7px;opacity:.7;margin-top:1px;text-align:center}
+.cbubble{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;cursor:pointer;border:2px solid rgba(255,255,255,.25);box-shadow:0 2px 12px var(--shadow);transition:transform .15s}.cbubble:hover{transform:scale(1.12)}
+
+/* ── Beaker section ── */
+#bk-row{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;align-items:flex-end;min-width:0}
+#bk-row::-webkit-scrollbar{height:3px}#bk-row::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.bkw{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 5px 9px;border-radius:10px;border:2px solid var(--border);background:rgba(15,23,42,.5);cursor:pointer;transition:all .2s;flex-shrink:0;min-width:76px}
+.bkw:hover{border-color:rgba(56,189,248,.5)}.bkw.bka{border-color:var(--accent);background:rgba(56,189,248,.07)}
+.bky{font-size:12px;font-weight:800;color:var(--text);transition:color .2s}.bkw.bka .bky{color:var(--accent)}
+.bkv{font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:1px}
+.bks{font-family:var(--mono);font-size:7px;margin-top:2px}
+.bks-ok{color:var(--accent3)}.bks-warn{color:var(--warn)}.bks-danger{color:var(--danger)}
+#bk-infobar{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:9px;padding:8px 10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:9px}
+.bkic{text-align:center}.bkil{font-family:var(--mono);font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.bkiv{font-size:11px;font-weight:800;color:var(--accent);margin-top:2px;font-family:var(--mono)}
+.bkiv.warn{color:var(--warn)}.bkiv.danger{color:var(--danger)}.bkiv.ok{color:var(--accent3)}
+#bk-trend{display:flex;gap:4px;align-items:flex-end;height:34px;margin-top:9px}
+#bk-tlabels{display:flex;gap:4px;margin-top:3px}
+.bktb{flex:1;border-radius:3px 3px 0 0;cursor:pointer;transition:all .18s;min-width:14px}
+.bktl{flex:1;text-align:center;font-family:var(--mono);font-size:7px;color:var(--muted)}
+#bk-lossbar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--accent3),var(--warn),var(--danger));position:relative;margin-top:9px}
+#bk-lossmarker{position:absolute;top:-4px;width:2px;height:13px;background:#fff;border-radius:2px;transform:translateX(-50%);transition:left .5s cubic-bezier(.4,0,.2,1)}
+.bk-lossends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;color:var(--muted);margin-top:3px}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <h1>❄ HMA Glacier Portal</h1>
+  <div class="tag" id="glacier-count-tag">Loading…</div>
+  <div class="spacer"></div>
+  <div id="region-wrap"><div id="region-btn">All HMA <span class="arr">▼</span></div><div id="region-menu"><div class="rmi active" data-r="all">All HMA <span class="rmc"></span></div></div></div>
+  <div id="zinfo">zoom <span id="zv">5</span> · <span id="zmode" style="color:var(--warn)">HMA</span></div>
+  <div id="bmap-wrap"><button class="hbtn" id="bmap-btn" title="Basemap">🗺</button><div id="bmap-menu">
+    <div class="bmi" data-bmap="topo"><div class="dot" style="background:#7a9e7e"></div>OpenTopoMap</div>
+    <div class="bmi" data-bmap="osm"><div class="dot" style="background:#a8c5da"></div>OpenStreetMap</div>
+    <div class="bmi active" data-bmap="gsatellite"><div class="dot" style="background:#3a5a2c"></div>Google Satellite</div>
+    <div class="bmi" data-bmap="ghybrid"><div class="dot" style="background:#5a7a4c"></div>Google Hybrid</div>
+    <div class="bmi" data-bmap="groad"><div class="dot" style="background:#e8d8a8"></div>Google Roads</div>
+    <div class="bmi" data-bmap="satellite"><div class="dot" style="background:#8b6f47"></div>ESRI Satellite</div>
+    <div class="bmi" data-bmap="dark"><div class="dot" style="background:#2d3748"></div>Dark (CartoDB)</div>
+    <div class="bmi" data-bmap="light"><div class="dot" style="background:#f0f4f8"></div>Light (CartoDB)</div>
+    <div class="bmi" data-bmap="terrain"><div class="dot" style="background:#c8b89a"></div>Terrain (Stamen)</div>
+  </div></div>
+  <button class="hbtn" id="theme-btn" title="Theme">🌙</button>
+  <div id="sw"><div id="stabs"><div class="stab act" data-by="both">Name+ID</div><div class="stab" data-by="name">Name</div><div class="stab" data-by="id">ID</div></div>
+    <div style="position:relative"><input id="si" type="text" placeholder="Search glacier…" autocomplete="off"/><div id="sr"></div></div></div>
+</div>
+
+<div id="mc"><div id="map"></div>
+  <div id="zguide">🔍 Zoom in to see clusters → outlines → click for data</div>
+  <div id="legend"><div class="lt">Map</div>
+    <div class="lr"><div class="ld" style="background:rgba(255,255,255,.5);border:1px dashed rgba(255,255,255,.5)"></div>HMA region outlines</div>
+    <div class="lr"><div class="ld" style="background:var(--accent)"></div>Glacier polygons</div>
+    <div class="lr"><div class="ld" style="background:var(--warn)"></div>Selected region highlight</div>
+  </div>
+</div>
+
+<div id="panel">
+  <div id="sbar"><div class="sc"><div class="sl">Mode</div><div class="sv b" id="s-mode" style="font-size:10px;margin-top:3px">HMA</div></div><div class="sc"><div class="sl">Visible</div><div class="sv i" id="s-vis">—</div></div><div class="sc"><div class="sl">Selected</div><div class="sv g" id="s-sel" style="font-size:8px;margin-top:3px">—</div></div></div>
+  <div id="ptabs"><div class="pt act" data-tab="glacier">Glacier</div><div class="pt" data-tab="overview">Overview</div></div>
+  <div id="pb">
+    <div id="tab-glacier">
+      <div id="placeholder"><div class="ico">🏔</div><p>Zoom in and click any glacier to explore its mass balance, volume, area history and water storage.</p></div>
+      <div id="gdetail" style="display:none">
+        <div id="gname">—</div>
+        <div id="gid">—</div>
+        <div class="igrid" id="igrid"></div>
+        <!-- ── BEAKER SECTION ── -->
+        <div class="csec">
+          <div class="ctitle" style="--accent:#2dd4bf">💧 Water Storage</div>
+
+          <div class="cbox">
+            <div id="bk-infobar" style="display:none">
+              <div class="bkic"><div class="bkil">Year</div><div class="bkiv" id="bk-iy">—</div></div>
+              <div class="bkic"><div class="bkil">Ice Volume</div><div class="bkiv" id="bk-ivol">—</div></div>
+              <div class="bkic"><div class="bkil">Water Equiv.</div><div class="bkiv" id="bk-iweq">—</div></div>
+              <div class="bkic"><div class="bkil">Loss vs start</div><div class="bkiv" id="bk-iloss">—</div></div>
+            </div>
+            <div id="bk-row"></div>
+            <div id="bk-nodata" class="nodata-msg" style="display:none">No volume data available</div>
+            <div id="bk-trend" style="display:none"></div>
+            <div id="bk-tlabels" style="display:none"></div>
+            <div id="bk-lossbar" style="display:none"><div id="bk-lossmarker"></div></div>
+            <div class="bk-lossends" id="bk-lossends" style="display:none">
+              <span>0% (baseline)</span><span>50% loss</span><span>100% gone</span>
+            </div>
+          </div>
+        </div>
+        <!-- ── END BEAKER SECTION ── -->
+
+        <div class="csec"><div class="ctitle">Mass Balance (m w.e. yr⁻¹)</div><div class="cbox" id="box-mb"><canvas id="c-mb" height="150"></canvas></div></div>
+        <div class="csec"><div class="ctitle v">Volume (km³)</div><div class="cbox" id="box-vol"><canvas id="c-vol" height="110"></canvas></div></div>
+        <div class="csec"><div class="ctitle a">Area (km²)</div><div class="cbox" id="box-area"><canvas id="c-area" height="110"></canvas></div></div>
+
+      </div>
+      <div id="gloading" style="display:none"><div class="spin"></div></div>
+    </div>
+    <div id="tab-overview" style="display:none"><div id="ov-loading"><div class="spin"></div></div><div id="ov-content" style="display:none"></div></div>
+  </div>
+  <div id="credit">Made by Pawan · IIT Roorkee</div>
+</div>
+
+<button id="dbg-toggle" onclick="document.getElementById('dbg-panel').classList.toggle('open')">🔍 Debug</button>
+<div id="dbg-panel">
+  <div style="font-weight:700;margin-bottom:6px;color:var(--accent)">Glacier Debug Panel</div>
+  <div id="dbg-content"><span class="dbg-info">Click a glacier to see debug info…</span></div>
+</div>
+
+<script>
+const API=`http://localhost:5000/api`, Z_HMA=6, Z_CLUSTERS=11, GCOL="#38bdf8";
+
+const REGION_COLORS = [
+  "#38bdf8","#818cf8","#34d399","#fb923c","#f87171",
+  "#a78bfa","#2dd4bf","#fbbf24","#f472b6","#60a5fa",
+  "#4ade80","#e879f9","#facc15","#22d3ee","#c084fc"
+];
+let regionColorMap = {};
+
+const hour=new Date().getHours(); let isDark=hour<6||hour>=18;
+function applyTheme(d){isDark=d;document.documentElement.dataset.theme=d?"dark":"light";document.getElementById("theme-btn").textContent=d?"🌙":"☀️";Chart.defaults.color=d?"#64748b":"#94a3b8";}
+applyTheme(isDark);
+document.getElementById("theme-btn").addEventListener("click",()=>applyTheme(!isDark));
+Chart.defaults.font.family="'JetBrains Mono',monospace";Chart.defaults.font.size=10;
+
+const BASEMAPS={topo:{url:"https://tile.opentopomap.org/{z}/{x}/{y}.png",attr:"© OpenTopoMap"},osm:{url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",attr:"© OSM"},gsatellite:{url:"https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",attr:"© Google"},ghybrid:{url:"https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",attr:"© Google"},groad:{url:"https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",attr:"© Google"},satellite:{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",attr:"© Esri"},dark:{url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",attr:"© CartoDB"},light:{url:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",attr:"© CartoDB"},terrain:{url:"https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg",attr:"© Stamen"}};
+let tileLayer=null;
+const map=L.map("map",{center:[35,82],zoom:5,zoomControl:true});
+function setBasemap(k){if(tileLayer)map.removeLayer(tileLayer);const b=BASEMAPS[k]||BASEMAPS.gsatellite;tileLayer=L.tileLayer(b.url,{attribution:b.attr,maxZoom:18});tileLayer.addTo(map);tileLayer.bringToBack();document.querySelectorAll(".bmi").forEach(e=>e.classList.toggle("active",e.dataset.bmap===k));}
+setBasemap("gsatellite");
+document.getElementById("bmap-btn").addEventListener("click",e=>{e.stopPropagation();document.getElementById("bmap-menu").classList.toggle("open");});
+document.addEventListener("click",e=>{if(!e.target.closest("#bmap-wrap"))document.getElementById("bmap-menu").classList.remove("open");});
+document.querySelectorAll(".bmi").forEach(e=>{e.addEventListener("click",()=>{setBasemap(e.dataset.bmap);document.getElementById("bmap-menu").classList.remove("open");});});
+
+let activeFilter="all",charts={},ovCharts={},ovLoaded=false,activeTab="glacier",selectedLayer=null,hmaRegions=[];
+const regionGroup=L.layerGroup().addTo(map),clusterGroup=L.layerGroup().addTo(map),polyGroup=L.featureGroup().addTo(map);
+let polyTimer=null,lastMode="";
+let hmaOutlineLayers={},highlightLayer=null;
+
+(async()=>{
+  const [outR,sumR,regR]=await Promise.all([fetch(`${API}/hma_outline`),fetch(`${API}/hma_summary`),fetch(`${API}/hma_regions`)]);
+  const hmaGeoJ=await outR.json(); window._hmaSumm=await sumR.json(); hmaRegions=await regR.json();
+  document.getElementById("glacier-count-tag").textContent=`${(window._hmaSumm.count/1000).toFixed(1)}k glaciers`;
+  hmaRegions.forEach((r,i)=>{regionColorMap[r.name]=REGION_COLORS[i%REGION_COLORS.length];});
+  if(hmaGeoJ.features){
+    hmaGeoJ.features.forEach(feat=>{
+      const rname=feat.properties?.hma_region||feat.properties?.[Object.keys(feat.properties).find(k=>k!=='geometry')]||'';
+      const col=regionColorMap[rname]||"rgba(255,255,255,0.4)";
+      const lyr=L.geoJSON(feat,{style:{color:col,weight:1.5,fillOpacity:0.03,fillColor:col,dashArray:"4,3"},interactive:false}).addTo(map);
+      hmaOutlineLayers[rname]=lyr;
+    });
+  }
+  buildRegionMenu();
+  renderForZoom();
+})();
+
+function buildRegionMenu(){
+  const menu=document.getElementById("region-menu");
+  hmaRegions.forEach(r=>{
+    const d=document.createElement("div");d.className="rmi";d.dataset.r=r.name;
+    const col=regionColorMap[r.name]||"#888";
+    d.innerHTML=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${col};flex-shrink:0"></span> ${r.name} <span class="rmc">${r.count.toLocaleString()}</span>`;
+    d.addEventListener("click",()=>selectRegion(r.name));
+    menu.appendChild(d);
+  });
+  menu.querySelector('[data-r="all"]').addEventListener("click",()=>selectRegion("all"));
+}
+document.getElementById("region-btn").addEventListener("click",e=>{e.stopPropagation();document.getElementById("region-menu").classList.toggle("open");});
+document.addEventListener("click",e=>{if(!e.target.closest("#region-wrap"))document.getElementById("region-menu").classList.remove("open");});
+
+function selectRegion(r){
+  activeFilter=r;
+  document.getElementById("region-btn").innerHTML=(r==="all"?"All HMA":r)+' <span class="arr">▼</span>';
+  document.querySelectorAll(".rmi").forEach(e=>e.classList.toggle("active",e.dataset.r===r));
+  document.getElementById("region-menu").classList.remove("open");
+  if(highlightLayer){map.removeLayer(highlightLayer);highlightLayer=null;}
+  if(r!=="all"){
+    const regInfo=hmaRegions.find(x=>x.name===r);
+    const outLyr=hmaOutlineLayers[r];
+    if(outLyr){highlightLayer=L.geoJSON(outLyr.toGeoJSON(),{style:{color:"#fbbf24",weight:3,fillOpacity:0.12,fillColor:"#fbbf24",dashArray:""},interactive:false}).addTo(map);}
+    if(regInfo&&regInfo.bbox){const[w,s,e,n]=regInfo.bbox;map.flyToBounds([[s,w],[n,e]],{padding:[30,30],duration:1.2});}
+  } else {
+    map.flyTo([window._hmaSumm.lat,window._hmaSumm.lon],5,{duration:1.2});
+  }
+  lastMode=""; renderForZoom();
+}
+
+map.on("zoomend",renderForZoom);
+map.on("moveend",()=>{if(map.getZoom()>=Z_CLUSTERS)scheduleFetchPolygons();});
+function renderForZoom(){
+  const z=map.getZoom();
+  document.getElementById("zv").textContent=z;
+  if(z<Z_HMA)showMode("hma");
+  else if(z<Z_CLUSTERS)showMode("clusters");
+  else showMode("polygons");
+}
+function showMode(m){
+  const zm=document.getElementById("zmode"),sm=document.getElementById("s-mode");
+  zm.textContent=m;
+  zm.style.color=m==="hma"?"var(--warn)":m==="clusters"?"var(--accent2)":"var(--accent3)";
+  sm.textContent={hma:"HMA Region",clusters:"Clusters",polygons:"Glaciers"}[m];
+  if(m==="hma"){
+    document.getElementById("zguide").textContent="🔍 Zoom in to see clusters → outlines → click for data";
+    document.getElementById("zguide").style.display="";
+    if(lastMode!=="hma"){clusterGroup.clearLayers();polyGroup.clearLayers();renderHMABubble();}
+  } else if(m==="clusters"){
+    document.getElementById("zguide").textContent="🔍 Zoom in more to see glacier outlines";
+    document.getElementById("zguide").style.display="";
+    regionGroup.clearLayers();polyGroup.clearLayers();fetchClusters();
+  } else {
+    document.getElementById("zguide").style.display="none";
+    regionGroup.clearLayers();clusterGroup.clearLayers();
+    if(lastMode!=="polygons")fetchPolygons();
+  }
+  lastMode=m;
+}
+
+function renderHMABubble(){regionGroup.clearLayers();const s=window._hmaSumm;if(!s)return;document.getElementById("s-vis").textContent="1 region";const sz=110;const icon=L.divIcon({className:"",html:`<div class="rbubble" style="color:${GCOL};width:${sz}px;height:${sz}px;" onclick="map.flyTo([${s.lat},${s.lon}],${Z_HMA},{duration:1.2})"><div class="rbc" style="color:${GCOL}">${(s.count/1000).toFixed(1)}k</div><div class="rbn">glaciers</div></div>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});L.marker([s.lat,s.lon],{icon}).addTo(regionGroup);}
+
+async function fetchClusters(){const b=map.getBounds();const bbox=`${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;const rP=activeFilter!=="all"?`&region=${encodeURIComponent(activeFilter)}`:"";const data=await(await fetch(`${API}/clusters?bbox=${bbox}&cells=14${rP}`)).json();clusterGroup.clearLayers();document.getElementById("s-vis").textContent=data.length+" cells";data.forEach(d=>{const n=d.count,sz=Math.min(62,Math.max(28,18+Math.sqrt(n)*1.5)),lbl=n>=1000?(n/1000).toFixed(1)+"k":n;const icon=L.divIcon({className:"",html:`<div class="cbubble" style="width:${sz}px;height:${sz}px;font-size:${Math.max(9,sz*.22)}px;background:${GCOL}20;border-color:${GCOL};color:${GCOL};" onclick="map.flyTo([${d.lat},${d.lon}],${Z_CLUSTERS},{duration:.9})">${lbl}</div>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});L.marker([d.lat,d.lon],{icon}).addTo(clusterGroup);});}
+
+let _polyFetchId=0;
+function scheduleFetchPolygons(){clearTimeout(polyTimer);polyTimer=setTimeout(fetchPolygons,350);}
+async function fetchPolygons(){
+  const myId=++_polyFetchId;
+  const b=map.getBounds();
+  const bbox=`${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+  const rP=activeFilter!=="all"?`&region=${encodeURIComponent(activeFilter)}`:"";
+  let geoj;
+  try{geoj=await(await fetch(`${API}/polygons?bbox=${bbox}${rP}`)).json();}
+  catch(e){console.error("fetchPolygons failed:",e);return;}
+  if(myId!==_polyFetchId)return;
+  polyGroup.clearLayers();
+  if(!geoj.features?.length){document.getElementById("s-vis").textContent="0";return;}
+  document.getElementById("s-vis").textContent=geoj.features.length;
+  L.geoJSON(geoj,{
+    style(){return{color:GCOL,weight:1,opacity:.9,fillColor:GCOL,fillOpacity:.12};},
+    onEachFeature(f,l){
+      const gid=f.properties.id,gname=f.properties.name||f.properties.id;
+      l.on("click",e=>{L.DomEvent.stopPropagation(e);onPolyClick(l,gid,gname);});
+      l.on("mouseover",()=>{if(l!==selectedLayer)l.setStyle({fillOpacity:.35,weight:2,color:"#fff"});});
+      l.on("mouseout",()=>{if(l!==selectedLayer)l.setStyle({fillOpacity:.12,weight:1,color:GCOL});});
+    }
+  }).addTo(polyGroup);
+}
+function highlightPoly(l){if(selectedLayer&&selectedLayer!==l)selectedLayer.setStyle({color:GCOL,weight:1,fillOpacity:.07});selectedLayer=l;l.setStyle({color:"#fff",weight:2.5,fillOpacity:.3});l.bringToFront();}
+function onPolyClick(l,id,name){_currentId=null;highlightPoly(l);openGlacier(id,name);}
+
+// ── Search ──
+let searchBy="both";
+document.querySelectorAll(".stab").forEach(t=>{t.addEventListener("click",()=>{document.querySelectorAll(".stab").forEach(x=>x.classList.remove("act"));t.classList.add("act");searchBy=t.dataset.by;doSearch();});});
+const si=document.getElementById("si"),sr=document.getElementById("sr");let stimer;
+si.addEventListener("input",()=>{clearTimeout(stimer);stimer=setTimeout(doSearch,200);});
+document.addEventListener("click",e=>{if(!e.target.closest("#sw"))sr.style.display="none";});
+async function doSearch(){const q=si.value.trim();if(q.length<2){sr.style.display="none";return;}const rP=activeFilter!=="all"?`&region=${encodeURIComponent(activeFilter)}`:"";const hits=await(await fetch(`${API}/search?q=${encodeURIComponent(q)}&by=${searchBy}${rP}&limit=25`)).json();if(!hits.length){sr.style.display="none";return;}sr.innerHTML=hits.map(g=>`<div class="sri" onclick="flyToGlacier('${g.id}','${(g.name||g.id).replace(/'/g,"\\'")}',${g.lat},${g.lon})">${g.name||g.id}<small>${g.id} · ${g.area?g.area.toFixed(2)+' km²':''} · ${g.region}</small></div>`).join("");sr.style.display="block";}
+window.flyToGlacier=(id,name,lat,lon)=>{sr.style.display="none";si.value=name;map.flyTo([lat,lon],Math.max(map.getZoom(),12),{duration:1.2});openGlacier(id,name);};
+
+// ── Tabs ──
+document.querySelectorAll(".pt").forEach(t=>{t.addEventListener("click",()=>{document.querySelectorAll(".pt").forEach(x=>x.classList.remove("act"));t.classList.add("act");activeTab=t.dataset.tab;document.getElementById("tab-glacier").style.display=activeTab==="glacier"?"":"none";document.getElementById("tab-overview").style.display=activeTab==="overview"?"":"none";if(activeTab==="overview"&&!ovLoaded)loadOverview("all");});});
+
+// ══════════════════════════════════════════════════════════════
+//  GLACIER DETAIL
+// ══════════════════════════════════════════════════════════════
+let _openReqId=0,_currentId=null,_openTimer=null;
+
+const _dbgLines=[];
+function dbg(cls,msg){console.log(`[DBG][${cls}] ${msg}`);_dbgLines.unshift(`<div class="dbg-row dbg-${cls}">${msg}</div>`);if(_dbgLines.length>60)_dbgLines.pop();const el=document.getElementById("dbg-content");if(el)el.innerHTML=_dbgLines.join("");}
+
+function destroyCharts(){["c-mb","c-vol","c-area"].forEach(cid=>{const el=document.getElementById(cid);if(el){const ch=Chart.getChart(el);if(ch){ch.destroy();dbg("info",`destroyed chart #${cid}`);}}}); charts={};}
+
+function freshCanvas(boxId,canvasId,height){
+  const box=document.getElementById(boxId);
+  box.querySelectorAll("canvas").forEach(c=>{const ch=Chart.getChart(c);if(ch)ch.destroy();c.remove();});
+  box.querySelectorAll(".nodata-msg").forEach(e=>e.remove());
+  const c=document.createElement("canvas");c.id=canvasId;c.height=height;box.prepend(c);return c;
+}
+
+function openGlacier(id,name){if(_openTimer)clearTimeout(_openTimer);_openTimer=setTimeout(()=>_doOpenGlacier(id,name),50);}
+
+async function _doOpenGlacier(id,name){
+  if(id===_currentId&&document.getElementById("gdetail").style.display!=="none"){dbg("info",`${id} already displayed — skip`);return;}
+  _currentId=id;
+  const reqId=++_openReqId;
+  dbg("info",`── openGlacier: ${id} (req #${reqId})`);
+
+  document.querySelectorAll(".pt").forEach(x=>x.classList.remove("act"));
+  document.querySelector('[data-tab="glacier"]').classList.add("act");
+  activeTab="glacier";
+  document.getElementById("tab-glacier").style.display="";
+  document.getElementById("tab-overview").style.display="none";
+  document.getElementById("placeholder").style.display="none";
+  document.getElementById("gdetail").style.display="none";
+  document.getElementById("gloading").style.display="";
+  document.getElementById("s-sel").textContent=id.split(".").pop()||id;
+
+  destroyCharts();
+
+  try{
+    dbg("info","Fetching info + timeseries + field MB…");
+    const[iR,tR,fR]=await Promise.all([
+      fetch(`${API}/glacier/${encodeURIComponent(id)}/info`),
+      fetch(`${API}/glacier/${encodeURIComponent(id)}/timeseries`),
+      fetch(`${API}/glacier/${encodeURIComponent(id)}/field_mb`),
+    ]);
+
+    if(reqId!==_openReqId){dbg("warn",`${id} aborted (stale req #${reqId})`);return;}
+    dbg("info",`HTTP: info=${iR.status} ts=${tR.status}`);
+
+    let info,ts,fmb;
+    try{info=await iR.json();}catch(e){dbg("err",`info JSON: ${e.message}`);throw e;}
+    try{ts=await tR.json();}catch(e){dbg("err",`ts JSON: ${e.message}`);throw e;}
+    try{fmb=await fR.json();}catch(e){dbg("warn",`field_mb JSON: ${e.message}`);fmb={has_data:false,records:[]};}
+
+    if(reqId!==_openReqId){dbg("warn",`${id} aborted after JSON parse`);return;}
+
+    dbg(info.error?"err":"ok",`info: ${info.error?"ERROR: "+info.error:"OK — "+info.name}`);
+    dbg(ts.error?"err":"ok",`ts: ${ts.error?"ERROR: "+ts.error:`${ts.years?.length} yrs`}`);
+
+    if(info.error){
+      document.getElementById("gloading").style.display="none";
+      document.getElementById("placeholder").innerHTML=`<div class="ico">⚠️</div><p>Glacier <b>${id}</b> not found.<br>${info.error}</p>`;
+      document.getElementById("placeholder").style.display="";
+      return;
+    }
+
+    document.getElementById("gname").textContent=info.name||id;
+    document.getElementById("gid").textContent=id;
+
+    const chips=[
+      ["Area (shp)",info.area_km2_shp?info.area_km2_shp.toFixed(3)+" km²":"—"],
+      ["Area (latest)",info.latest_area_km2?info.latest_area_km2.toFixed(3)+" km²":"—"],
+      ["Volume",info.latest_volume_km3?info.latest_volume_km3.toFixed(4)+" km³":"—"],
+      ["MB (latest)",info.latest_mb_annual?info.latest_mb_annual.toFixed(3)+" mwe":"—"],
+      ["Elev min",info.zmin?info.zmin+" m":"—"],
+      ["Elev max",info.zmax?info.zmax+" m":"—"],
+      ["HMA Region",info.region||"—"],
+      ["Period",info.year_min&&info.year_max?`${info.year_min}–${info.year_max}`:"—"],
+      ["Field MB",fmb.has_data?`${fmb.n} obs. years`:"—"],
+    ];
+    document.getElementById("igrid").innerHTML=chips.map(([l,v])=>`<div class="ic"><div class="il">${l}</div><div class="iv" style="${l==='Field MB'&&fmb.has_data?'color:var(--warn)':''}">${v}</div></div>`).join("");
+
+    const mbTitle=document.querySelector('.ctitle');
+    const existingBadge=mbTitle?.querySelector('.fmb-badge');
+    if(existingBadge)existingBadge.remove();
+    if(fmb.has_data&&mbTitle){
+      const badge=document.createElement('span');
+      badge.className='fmb-badge';
+      badge.style.cssText='font-size:8px;padding:2px 7px;border-radius:20px;background:rgba(251,146,60,.18);border:1px solid var(--warn);color:var(--warn);margin-left:8px;font-weight:600;letter-spacing:.4px';
+      badge.textContent=`● ${fmb.n} field obs.`;
+      mbTitle.appendChild(badge);
+    }
+
+    document.getElementById("gloading").style.display="none";
+    document.getElementById("gdetail").style.display="";
+
+    const cMb=freshCanvas("box-mb","c-mb",150);
+    const cVol=freshCanvas("box-vol","c-vol",110);
+    const cArea=freshCanvas("box-area","c-area",110);
+
+    const ok=!ts.error&&ts.years?.length>0;
+    const yrs=ok?ts.years:[];
+    const mb=ok?(ts.mb_annual||ts.mb_annual_mwe||[]):[];
+    const cum=ok?(ts.mb_cumulative||ts.mb_cumulative_mwe||[]):[];
+    const vol=ok?(ts.volume_km3||[]):[];
+    const area=ok?(ts.area_km2||[]):[];
+
+    const gc=isDark?"rgba(255,255,255,.05)":"rgba(0,0,0,.07)";
+    const hd=a=>a.some(v=>v!==null&&v!==undefined&&isFinite(v));
+    const nd=`<div class="nodata-msg">No data available</div>`;
+    const bO=t=>({responsive:true,animation:{duration:400},plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false}},scales:{x:{grid:{color:gc},ticks:{maxTicksLimit:9}},y:{grid:{color:gc},title:{display:true,text:t}}}});
+
+    if(hd(mb)||hd(cum)){
+      try{
+        const fmbDatasets=[];
+        if(fmb.has_data&&fmb.records.length>0){
+          const annualObs=fmb.records.filter(r=>r.annual!==null&&r.annual!==undefined).map(r=>({x:r.year,y:r.annual,_rec:r}));
+          const winterObs=fmb.records.filter(r=>r.winter!==null&&r.winter!==undefined).map(r=>({x:r.year,y:r.winter,_rec:r}));
+          const summerObs=fmb.records.filter(r=>r.summer!==null&&r.summer!==undefined).map(r=>({x:r.year,y:r.summer,_rec:r}));
+          if(annualObs.length>0)fmbDatasets.push({label:"Obs. Annual MB",data:annualObs,type:"scatter",xAxisID:"x",yAxisID:"y",pointStyle:"circle",pointRadius:5,pointHoverRadius:7,backgroundColor:"rgba(251,146,60,.85)",borderColor:"#fb923c",borderWidth:1.5,order:0});
+          if(winterObs.length>0)fmbDatasets.push({label:"Obs. Winter MB",data:winterObs,type:"scatter",xAxisID:"x",yAxisID:"y",pointStyle:"triangle",pointRadius:5,pointHoverRadius:7,backgroundColor:"rgba(129,140,248,.85)",borderColor:"#818cf8",borderWidth:1.5,order:0});
+          if(summerObs.length>0)fmbDatasets.push({label:"Obs. Summer MB",data:summerObs,type:"scatter",xAxisID:"x",yAxisID:"y",pointStyle:"rectRot",pointRadius:5,pointHoverRadius:7,backgroundColor:"rgba(248,113,113,.85)",borderColor:"#f87171",borderWidth:1.5,order:0});
+        }
+        charts.mb=new Chart(cMb,{type:"bar",data:{labels:yrs,datasets:[
+          {label:"Annual MB",data:mb,backgroundColor:mb.map(v=>v!=null&&v>=0?"rgba(52,211,153,.45)":"rgba(248,113,113,.45)"),borderColor:mb.map(v=>v!=null&&v>=0?"#34d399":"#f87171"),borderWidth:1,borderRadius:2,order:2},
+          {label:"Cumul.",data:cum,type:"line",borderColor:"#38bdf8",borderWidth:1.5,tension:.3,pointRadius:0,yAxisID:"y2",order:1},
+          ...fmbDatasets,
+        ]},options:{responsive:true,animation:{duration:400},plugins:{legend:{display:fmb.has_data,labels:{color:isDark?"#94a3b8":"#64748b",font:{family:"'JetBrains Mono',monospace",size:9},boxWidth:10,padding:10,filter:item=>item.text!=="Annual MB"&&item.text!=="Cumul."}},tooltip:{mode:"index",intersect:false,callbacks:{afterBody:(items)=>{const obs=items.find(i=>i.dataset.label?.startsWith("Obs."));if(obs&&obs.raw?._rec?.source)return[`Source: ${obs.raw._rec.source}`];return[];}}}},scales:{x:{grid:{color:gc},ticks:{maxTicksLimit:9}},y:{grid:{color:gc},title:{display:true,text:"Annual (m w.e.)"}},y2:{position:"right",grid:{display:false},title:{display:true,text:"Cumul."}}}}});
+        dbg("ok","MB chart created");
+      }catch(e){dbg("err",`MB chart FAILED: ${e.message}`);cMb.style.display="none";document.getElementById("box-mb").insertAdjacentHTML("beforeend",`<div class="nodata-msg" style="color:var(--danger)">Chart error: ${e.message}</div>`);}
+    } else {cMb.style.display="none";document.getElementById("box-mb").insertAdjacentHTML("beforeend",nd);dbg("warn","MB: no valid data");}
+
+    if(hd(vol)){
+      try{charts.vol=new Chart(cVol,{type:"line",data:{labels:yrs,datasets:[{data:vol,borderColor:"#818cf8",borderWidth:2,backgroundColor:"rgba(129,140,248,.12)",fill:true,tension:.3,pointRadius:0}]},options:bO("km³")});dbg("ok","VOL chart created");}
+      catch(e){dbg("err",`VOL chart FAILED: ${e.message}`);cVol.style.display="none";document.getElementById("box-vol").insertAdjacentHTML("beforeend",`<div class="nodata-msg" style="color:var(--danger)">Chart error: ${e.message}</div>`);}
+    } else {cVol.style.display="none";document.getElementById("box-vol").insertAdjacentHTML("beforeend",nd);}
+
+    if(hd(area)){
+      try{charts.area=new Chart(cArea,{type:"line",data:{labels:yrs,datasets:[{data:area,borderColor:"#34d399",borderWidth:2,backgroundColor:"rgba(52,211,153,.1)",fill:true,tension:.3,pointRadius:0}]},options:bO("km²")});dbg("ok","AREA chart created");}
+      catch(e){dbg("err",`AREA chart FAILED: ${e.message}`);cArea.style.display="none";document.getElementById("box-area").insertAdjacentHTML("beforeend",`<div class="nodata-msg" style="color:var(--danger)">Chart error: ${e.message}</div>`);}
+    } else {cArea.style.display="none";document.getElementById("box-area").insertAdjacentHTML("beforeend",nd);}
+
+    // ── RENDER BEAKERS using the same ts already fetched ──
+    renderBeakerSection(ts);
+
+    dbg("ok",`DONE — mb=${!!charts.mb} vol=${!!charts.vol} area=${!!charts.area}`);
+
+  }catch(err){
+    dbg("err",`CATCH: ${err.message}`);
+    console.error("[openGlacier] CATCH:",id,err);
+    _currentId=null;
+    document.getElementById("gloading").style.display="none";
+    document.getElementById("placeholder").style.display="";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BEAKER WIDGET
+// ══════════════════════════════════════════════════════════════
+const BK_GAP=25, BK_MIN=2, BK_MAX=12, ICE_RHO=0.917;
+let _bkYears=[], _bkVols=[], _bkBase=1, _bkActive=null;
+
+function bkPickYears(years,vols){
+  const pairs=years.map((y,i)=>({y,v:vols[i]})).filter(p=>p.v!==null&&p.v!==undefined&&isFinite(p.v));
+  if(!pairs.length)return[];
+  const yMin=pairs[0].y,yMax=pairs[pairs.length-1].y;
+  let gap=BK_GAP;
+  for(let iter=0;iter<40;iter++){
+    const snaps=[pairs[0]];
+    for(let yr=Math.ceil(yMin/gap)*gap;yr<=yMax;yr+=gap){
+      const p=pairs.reduce((a,b)=>Math.abs(b.y-yr)<Math.abs(a.y-yr)?b:a);
+      if(snaps[snaps.length-1].y!==p.y)snaps.push(p);
+    }
+    if(snaps[snaps.length-1].y!==pairs[pairs.length-1].y)snaps.push(pairs[pairs.length-1]);
+    const d=snaps.filter((p,i,a)=>i===0||p.y!==a[i-1].y);
+    if(d.length>=BK_MIN&&d.length<=BK_MAX)return d;
+    if(d.length<BK_MIN)gap=Math.max(1,Math.floor(gap/2));
+    else gap+=10;
+  }
+  const step=Math.ceil(pairs.length/BK_MAX);
+  const out=[];
+  for(let i=0;i<pairs.length;i+=step)out.push(pairs[i]);
+  if(out[out.length-1].y!==pairs[pairs.length-1].y)out.push(pairs[pairs.length-1]);
+  return out.slice(0,BK_MAX);
+}
+
+function bkSVG(uid,pct,isActive){
+  const gX=16,gW=54,gTop=26,gBot=192,iH=gBot-gTop;
+  const fH=Math.max(3,pct*iH),fY=gBot-fH;
+  const hue=195+(1-pct)*15,lgt=35+pct*20;
+  const wc=`hsl(${hue},75%,${lgt}%)`;
+  const gs=isActive?"#38bdf8":"#243048";
+  return `<svg width="80" height="200" viewBox="0 0 86 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="bc${uid}"><rect x="${gX}" y="${gTop}" width="${gW}" height="${iH}" rx="1"/></clipPath>
+    <linearGradient id="wg${uid}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="${wc}" stop-opacity=".65"/>
+      <stop offset="50%" stop-color="${wc}" stop-opacity=".98"/>
+      <stop offset="100%" stop-color="${wc}" stop-opacity=".65"/>
+    </linearGradient>
+    <linearGradient id="gg${uid}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(148,163,184,.18)"/>
+      <stop offset="40%" stop-color="rgba(148,163,184,.04)"/>
+      <stop offset="100%" stop-color="rgba(148,163,184,.14)"/>
+    </linearGradient>
+  </defs>
+  <path d="M${gX} ${gTop} L${gX} ${gBot} Q${gX} ${gBot+2} ${gX+2} ${gBot+2} L${gX+gW-2} ${gBot+2} Q${gX+gW} ${gBot+2} ${gX+gW} ${gBot} L${gX+gW} ${gTop} Z"
+    fill="url(#gg${uid})" stroke="${gs}" stroke-width="${isActive?1.8:1.2}"/>
+  <rect x="${gX+1}" y="${fY}" width="${gW-2}" height="${fH+1}" fill="url(#wg${uid})" clip-path="url(#bc${uid})"/>
+  <path d="M${gX+1} ${fY} Q${gX+14} ${fY-3} ${gX+gW/2} ${fY} Q${gX+gW-14} ${fY+3} ${gX+gW-1} ${fY}"
+    fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.2" clip-path="url(#bc${uid})"/>
+  ${pct>0.04?[22,33,47,59].map(x=>`<polygon points="${x},${fY+1} ${x-3},${fY+7} ${x+3},${fY+7}" fill="rgba(186,230,253,.55)" clip-path="url(#bc${uid})"/>`).join(""):""}
+  <rect x="${gX-4}" y="${gTop-4}" width="${gW+8}" height="7" rx="3" fill="#111827" stroke="${gs}" stroke-width="${isActive?1.6:1}"/>
+  <rect x="${gX}" y="${gBot}" width="${gW}" height="3" rx="1" fill="${gs}"/>
+  ${[.25,.5,.75,1].map(t=>{const ty=gBot-t*iH;return `<line x1="${gX+gW}" y1="${ty}" x2="${gX+gW+7}" y2="${ty}" stroke="#334155" stroke-width="1"/><text x="${gX+gW+9}" y="${ty+3.5}" font-size="7" fill="#475569" font-family="monospace">${Math.round(t*100)}%</text>`;}).join("")}
+  ${fH>28?`<text x="${gX+gW/2}" y="${fY+fH/2+4}" text-anchor="middle" font-size="${pct>0.4?12:10}" font-weight="700" fill="rgba(255,255,255,.92)" font-family="monospace">${Math.round(pct*100)}%</text>`:""}
+</svg>`;
+}
+
+function bkStatus(pct){
+  if(pct>=0.8)return{cls:"bks-ok",txt:"✓ Stable"};
+  if(pct>=0.5)return{cls:"bks-warn",txt:"● Declining"};
+  return{cls:"bks-danger",txt:"⚠ Critical"};
+}
+
+function bkSelectBeaker(i){
+  _bkActive=i;
+  const yr=_bkYears[i],vol=_bkVols[i],pct=vol/_bkBase;
+  const weq=(vol*ICE_RHO).toFixed(4),loss=((1-pct)*100).toFixed(1);
+  document.getElementById("bk-iy").textContent=yr;
+  document.getElementById("bk-ivol").textContent=vol.toFixed(4)+" km³";
+  document.getElementById("bk-iweq").textContent=weq+" km³";
+  const lel=document.getElementById("bk-iloss");
+  lel.textContent=loss+"%";
+  lel.className="bkiv "+(pct>=0.8?"ok":pct>=0.5?"warn":"danger");
+  document.getElementById("bk-lossmarker").style.left=(Math.max(0,Math.min(1,1-pct))*100)+"%";
+  bkRenderBeakers();
+  bkRenderTrend();
+}
+
+function bkRenderBeakers(){
+  const row=document.getElementById("bk-row");
+  row.innerHTML="";
+  _bkYears.forEach((yr,i)=>{
+    const pct=_bkVols[i]/_bkBase,st=bkStatus(pct);
+    const w=document.createElement("div");
+    w.className="bkw"+(i===_bkActive?" bka":"");
+    w.innerHTML=bkSVG(`${yr}x${i}`,pct,i===_bkActive)
+      +`<div class="bky">${yr}</div>`
+      +`<div class="bkv">${_bkVols[i].toFixed(4)} km³</div>`
+      +`<div class="bks ${st.cls}">${st.txt}</div>`;
+    w.addEventListener("click",()=>bkSelectBeaker(i));
+    row.appendChild(w);
+  });
+}
+
+function bkRenderTrend(){
+  const tb=document.getElementById("bk-trend"),tl=document.getElementById("bk-tlabels");
+  tb.innerHTML="";tl.innerHTML="";
+  _bkYears.forEach((yr,i)=>{
+    const pct=_bkVols[i]/_bkBase,h=Math.max(3,pct*34),isA=i===_bkActive;
+    const b=document.createElement("div");
+    b.className="bktb";
+    b.style.height=h+"px";
+    b.style.background=isA?"#38bdf8":`rgba(56,189,248,${.15+pct*.5})`;
+    b.style.border=isA?"1px solid #38bdf8":"1px solid transparent";
+    b.addEventListener("click",()=>bkSelectBeaker(i));
+    tb.appendChild(b);
+    const l=document.createElement("div");
+    l.className="bktl";l.textContent=yr;tl.appendChild(l);
+  });
+}
+
+function renderBeakerSection(ts){
+  const row=document.getElementById("bk-row");
+  const nodata=document.getElementById("bk-nodata");
+  const infobar=document.getElementById("bk-infobar");
+  const trend=document.getElementById("bk-trend");
+  const tlabels=document.getElementById("bk-tlabels");
+  const lossbar=document.getElementById("bk-lossbar");
+  const lossends=document.getElementById("bk-lossends");
+
+  const years=ts.years||[],vols=ts.volume_km3||[];
+  const snaps=bkPickYears(years,vols);
+
+  if(snaps.length<BK_MIN){
+    row.innerHTML="";
+    nodata.style.display="";
+    infobar.style.display="none";
+    trend.style.display="none";
+    tlabels.style.display="none";
+    lossbar.style.display="none";
+    lossends.style.display="none";
+    return;
+  }
+
+  nodata.style.display="none";
+  infobar.style.display="";
+  trend.style.display="";
+  tlabels.style.display="";
+  lossbar.style.display="";
+  lossends.style.display="";
+
+  _bkYears=snaps.map(p=>p.y);
+  _bkVols=snaps.map(p=>p.v);
+  _bkBase=_bkVols[0];
+  _bkActive=0;
+
+  bkRenderBeakers();
+  bkRenderTrend();
+  bkSelectBeaker(0);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  OVERVIEW
+// ══════════════════════════════════════════════════════════════
+async function loadOverview(rn){
+  const cont=document.getElementById("ov-content"),ld=document.getElementById("ov-loading");ld.style.display="";cont.style.display="none";
+  Object.values(ovCharts).forEach(c=>{try{c.destroy();}catch(e){}});ovCharts={};
+  const url=rn==="all"?`${API}/stats/hma`:`${API}/stats/region/${encodeURIComponent(rn)}`;
+  try{
+    const res=await fetch(url);if(!res.ok)throw new Error(`HTTP ${res.status}`);const d=await res.json();
+    if(d.error){ld.style.display="none";cont.innerHTML=`<div class="nodata-msg">${d.error}</div>`;cont.style.display="";return;}
+    const gc=isDark?"rgba(255,255,255,.05)":"rgba(0,0,0,.07)",title=rn==="all"?"High Mountain Asia · All Glaciers":rn;
+    let p=`<div id="ov-region-sel"><div class="ov-rp ${rn==='all'?'act':''}" data-ovr="all">All HMA</div>`;
+    hmaRegions.forEach(r=>{p+=`<div class="ov-rp ${rn===r.name?'act':''}" data-ovr="${r.name}">${r.name} <span style="opacity:.5;font-size:7px">(${r.count})</span></div>`;});p+=`</div>`;
+    cont.innerHTML=`${p}<div style="font-size:13px;font-weight:800;margin:4px 0 10px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${title}</div><div class="ob"><div class="ot">Mean Annual Mass Balance (m w.e. yr⁻¹)</div><canvas id="o-mb" height="100"></canvas></div><div class="ob"><div class="ot">Total Ice Volume (km³)</div><canvas id="o-vol" height="100"></canvas></div><div class="ob"><div class="ot">Total Glacierized Area (km²)</div><canvas id="o-area" height="100"></canvas></div><div class="ob"><div class="ot">Number of Simulated Glaciers</div><canvas id="o-n" height="90"></canvas></div>`;
+    cont.querySelectorAll(".ov-rp").forEach(e=>{e.addEventListener("click",()=>loadOverview(e.dataset.ovr));});
+    const o={responsive:true,animation:{duration:350},plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false}},scales:{x:{grid:{color:gc},ticks:{maxTicksLimit:8}},y:{grid:{color:gc}}}};
+    ovCharts.mb=new Chart(document.getElementById("o-mb"),{type:"bar",data:{labels:d.years,datasets:[{data:d.mean_mb,backgroundColor:d.mean_mb.map(v=>v!=null&&v>=0?"rgba(52,211,153,.5)":"rgba(248,113,113,.5)"),borderColor:d.mean_mb.map(v=>v!=null&&v>=0?"#34d399":"#f87171"),borderWidth:1,borderRadius:2}]},options:o});
+    ovCharts.vol=new Chart(document.getElementById("o-vol"),{type:"line",data:{labels:d.years,datasets:[{data:d.total_volume,borderColor:"#818cf8",borderWidth:2,backgroundColor:"rgba(129,140,248,.12)",fill:true,tension:.3,pointRadius:0}]},options:o});
+    ovCharts.area=new Chart(document.getElementById("o-area"),{type:"line",data:{labels:d.years,datasets:[{data:d.total_area,borderColor:"#34d399",borderWidth:2,backgroundColor:"rgba(52,211,153,.1)",fill:true,tension:.3,pointRadius:0}]},options:o});
+    ovCharts.n=new Chart(document.getElementById("o-n"),{type:"bar",data:{labels:d.years,datasets:[{data:d.n_glaciers,backgroundColor:"rgba(56,189,248,.35)",borderColor:"#38bdf8",borderWidth:1,borderRadius:2}]},options:o});
+    ld.style.display="none";cont.style.display="";ovLoaded=true;
+  }catch(err){console.error("loadOverview:",err);ld.style.display="none";cont.innerHTML=`<div class="nodata-msg">Failed: ${err.message}</div>`;cont.style.display="";}
+}
+
+window.map=map;
+</script>
+</body>
+</html>

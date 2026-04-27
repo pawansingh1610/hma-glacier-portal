@@ -1,0 +1,8 @@
+flask
+flask-cors
+pandas
+geopandas
+shapely
+huggingface_hub
+gunicorn
+numpy
